@@ -3,13 +3,6 @@ on:
   push:
     branches:
       - homolog
-  pull_request:
-    branches:
-      - main
-    types:
-      - opened
-      - synchronize
-      - reopened
 
 permissions:
   contents: write
@@ -23,36 +16,44 @@ jobs:
       IMAGE_NAME: ${{ github.repository }}
       PROJECT_ID: fastech-homolog
       REGISTRY: gcr.io
+
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
-      - name: Setup gcloud
-        uses: google-github-actions/setup-gcloud@v3
-        with:
-          project_id: ${{ env.PROJECT_ID }}
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY_HOMOLOG }}
 
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
       - name: Configure Docker for GCR
         run: gcloud auth configure-docker ${{ env.REGISTRY }} -q
+
+      - uses: docker/setup-buildx-action@v3
 
       - name: Build and push image
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}
-          VERSION: ${{ github.sha }}
+          SHORT_SHA: ${GITHUB_SHA::7}
         run: |
           docker buildx build \
             --build-arg GITHUB_TOKEN=${{ secrets.RELEASE_GH_TOKEN }} \
-            --build-arg GIT_COMMIT_HASH=${ GITHUB_SHA::7 } \
-            -t "${{ env.IMAGE }}:${{ env.VERSION }}:latest" \
+            --build-arg GIT_COMMIT_HASH=${{ env.SHORT_SHA }} \
+            -t "${{ env.IMAGE }}:${{ env.SHORT_SHA }} \
+            -t $IMAGE:latest \
             --push . 
+
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+          echo "VERSION=$SHORT_SHA" >> $GITHUB_ENV  
 
       - name: Show pushed tags
         run: |
           echo "✅ Pushed:"
-          echo " - $${{ env.IMAGE }}:${{ env.VERSION }}"
+          echo " - $IMAGE:$SHORT_SHA"
+          echo " - $IMAGE:homolog"
