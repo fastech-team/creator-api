@@ -37,23 +37,22 @@ jobs:
       - name: Configure Docker for GCR
         run: gcloud auth configure-docker ${{ env.REGISTRY }} -q
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push image
+      - name: Build Docker image
         run: |
           IMAGE=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}
           SHORT_SHA=${GITHUB_SHA::7}
 
-          docker buildx build \
+          docker build \
             --build-arg GITHUB_TOKEN=${{ secrets.RELEASE_GH_TOKEN }} \
             --build-arg GIT_COMMIT_HASH=$SHORT_SHA \
             -t $IMAGE:$SHORT_SHA \
             -t $IMAGE:homolog \
-            --push .
 
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+
+      - name: Push versioned image
+        run:  docker push $IMAGE:$SHORT_SHA
 
       - name: Show pushed tags
         run: |
