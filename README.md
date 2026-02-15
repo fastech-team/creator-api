@@ -1,7 +1,7 @@
 # Complete CI/CD DevOps Project 🚀
 ### Deploy Python Flask App on Kubernetes cluster with GitOps Approach. 
 
-![alt text](imgs/arch.png)
+
 
 ---
 ### Workflow:
